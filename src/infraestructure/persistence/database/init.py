@@ -7,7 +7,9 @@ def init_database():
     conn = mysql.connector.connect(
         host=os.getenv("MYSQL_HOST", "localhost"),
         user=os.getenv("MYSQL_USER", "root"),
-        password=os.getenv("MYSQL_PASSWORD", "")
+        password=os.getenv("MYSQL_PASSWORD", ""),
+        port=int(os.getenv("DB_PORT", "3306")),  # Añadido el puerto
+        connection_timeout=30
     )
     
     cursor = conn.cursor()

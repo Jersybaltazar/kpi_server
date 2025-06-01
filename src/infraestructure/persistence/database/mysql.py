@@ -15,16 +15,18 @@ class MySQLConnectionPool:
             user = os.getenv("MYSQL_USER", "root")
             password = os.getenv("MYSQL_PASSWORD", "")
             database = os.getenv("MYSQL_DATABASE", "kpib")
-            
+            port = int(os.getenv("DB_PORT", "3306"))
+
             cls._instance = pooling.MySQLConnectionPool(
                 pool_name="kpib_pool",
                 pool_size=5,
                 host=host,
                 user=user,
                 password=password,
-                database=database
+                database=database,
+                port=port,
             )
-            print(f"MySQL pool created: connected to {database} on {host}")
+            print(f"MySQL pool created: connected to {database} on {host}:{port}")
         return cls._instance
 
 def get_db_connection():
