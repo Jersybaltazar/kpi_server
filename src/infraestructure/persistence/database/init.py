@@ -62,7 +62,12 @@ def init_database():
             cpk DOUBLE,
             k DOUBLE,
             cpm DOUBLE,
+            dpmo FLOAT,
+            yield_value FLOAT,
+            sigma_level FLOAT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            interpretation LONGTEXT CHECK (JSON_VALID(interpretation)),
+            histogram LONGTEXT CHECK (JSON_VALID(histogram)),
             FOREIGN KEY (ctq_id) REFERENCES ctqs(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         """)
@@ -94,6 +99,50 @@ def create_index_safe(cursor, create_index_sql):
         else:
             # Re-lanzar otros errores
             raise err
+
+def migrate_capacity_studies_table(cursor):
+    """Migra la tabla capacity_studies agregando columnas faltantes"""
+    db_name = os.getenv("MYSQL_DATABASE", "kpib")
+    
+    # Lista de columnas que deben existir
+    required_columns = [
+        ("dpmo", "FLOAT"),
+        ("yield_value", "FLOAT"), 
+        ("sigma_level", "FLOAT"),
+        ("interpretation", "LONGTEXT"),
+        ("histogram", "LONGTEXT")
+    ]
+    
+    for column_name, column_type in required_columns:
+        try:
+            # Verificar si la columna existe
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = %s 
+                AND TABLE_NAME = 'capacity_studies' 
+                AND COLUMN_NAME = %s
+            """, (db_name, column_name))
+            
+            column_exists = cursor.fetchone()[0] > 0
+            
+            if not column_exists:
+                # Agregar la columna
+                if column_name in ['interpretation', 'histogram']:
+                    # Para columnas JSON
+                    alter_sql = f"ALTER TABLE capacity_studies ADD COLUMN {column_name} {column_type} CHECK (JSON_VALID({column_name}))"
+                else:
+                    # Para columnas normales
+                    alter_sql = f"ALTER TABLE capacity_studies ADD COLUMN {column_name} {column_type}"
+                
+                cursor.execute(alter_sql)
+                print(f"Columna '{column_name}' agregada exitosamente")
+            else:
+                print(f"Columna '{column_name}' ya existe")
+                
+        except mysql.connector.Error as err:
+            print(f"Error al agregar columna {column_name}: {err}")
+            # No hacer rollback aquí, continuar con otras columnas
 
 if __name__ == "__main__":
     init_database()
