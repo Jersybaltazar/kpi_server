@@ -68,9 +68,9 @@ def init_database():
         """)
         
         # Crear índices para mejorar rendimiento
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_capacity_studies_ctq_id ON capacity_studies (ctq_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_capacity_studies_study_date ON capacity_studies (study_date)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ctqs_process_id ON ctqs (process_id)")
+        create_index_safe(cursor, "CREATE INDEX idx_capacity_studies_ctq_id ON capacity_studies (ctq_id)")
+        create_index_safe(cursor, "CREATE INDEX idx_capacity_studies_study_date ON capacity_studies (study_date)")
+        create_index_safe(cursor, "CREATE INDEX idx_ctqs_process_id ON ctqs (process_id)")
         
         conn.commit()
         print(f"Base de datos {db_name} inicializada correctamente")
@@ -81,6 +81,19 @@ def init_database():
     finally:
         cursor.close()
         conn.close()
+        
+def create_index_safe(cursor, create_index_sql):
+    """Crea un índice de forma segura, ignorando el error si ya existe"""
+    try:
+        cursor.execute(create_index_sql)
+        print(f"Índice creado: {create_index_sql}")
+    except mysql.connector.Error as err:
+        # Error 1061: Duplicate key name (el índice ya existe)
+        if err.errno == 1061:
+            print(f"Índice ya existe, omitiendo: {create_index_sql}")
+        else:
+            # Re-lanzar otros errores
+            raise err
 
 if __name__ == "__main__":
     init_database()
